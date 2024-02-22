@@ -79,7 +79,7 @@ module.exports.workfromhome = function (parent) {
             remoteport: map.port,
             localport: map.localport,
             rdplabel: map.rdplabel || "Work_Computer",
-            aadcompat: map.aadcompat || false
+            aadcompat: map.aadcompat || true
         };
         
         try { 
