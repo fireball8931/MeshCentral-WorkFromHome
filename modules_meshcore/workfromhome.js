@@ -22,6 +22,7 @@ var fs = require('fs');
 var os = require('os');
 var net = require('net');
 var http = require('http');
+var aad = null;
 
 var dbg = function(str) {
     if (debug_flag !== true) return;
