@@ -22,7 +22,7 @@ var fs = require('fs');
 var os = require('os');
 var net = require('net');
 var http = require('http');
-var aad = true;
+// var aad = true;
 
 var dbg = function(str) {
     if (debug_flag !== true) return;
@@ -194,10 +194,10 @@ function makeRDPShortcut(actualLocalPort, rdplabel, aad) {
     
     var fileContents = "full address:s:127.0.0.1:" + actualLocalPort;
     
-    if (aad) {
+    // if (aad) {
         fileContents += "\r\nenablecredsspsupport:i:0"
         + "\r\nauthentication level:i:2";
-    }
+    // }
     
     if (currentShortcutContents != fileContents) {
         dbg('writing to path: ' + path);
