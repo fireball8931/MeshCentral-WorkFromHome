@@ -146,7 +146,7 @@ function addMap() {
             'toNode': opts.toNode,
             'user': parent.userinfo._id,
             'rdplabel': 'WFH-' + parent.nodes.filter(o => { return o._id == opts.toNode })[0]['name'],
-            'aadcompat': false
+            'aadcompat': true
         });
     };
     
