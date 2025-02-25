@@ -21,7 +21,7 @@ module.exports.CreateDB = function(meshserver) {
         
         obj.getDBVersion = function() {
             return new Promise(function(resolve, reject) {
-                obj.file.find( { type: "db_version" } ).project( { _id: 0, version: 1 } ).toArray(function(err, vers){
+                obj.file.find({ type: "db_version" }).project({ _id: 0, version: 1 }).toArray(function(err, vers){
                     if (vers.length == 0) resolve(1);
                     else resolve(vers[0]['version']);
                 });
@@ -30,22 +30,22 @@ module.exports.CreateDB = function(meshserver) {
 
         obj.update = function(id, args) {
             id = formatId(id);
-            return obj.file.updateOne( { _id: id }, { $set: args } );
+            return obj.file.updateOne({ _id: id }, { $set: args });
         };
         obj.delete = function(id) {
             id = formatId(id);
-            return obj.file.deleteOne( { _id: id } );
+            return obj.file.deleteOne({ _id: id });
         };
         obj.get = function(id) {
             if (id == null || id == 'null') return new Promise(function(resolve, reject) { resolve([]); });
             id = formatId(id);
-            return obj.file.find( { _id: id } ).toArray();
+            return obj.file.find({ _id: id }).toArray();
         };
         obj.getMaps = function(nodeId) {
-            return obj.file.find( { fromNode: nodeId, type: 'portMap' } ).toArray();
+            return obj.file.find({ fromNode: nodeId, type: 'portMap' }).toArray();
         };
         obj.addMap = function(user, fromNode, toNode, rdplabel, aadcompat) {
-            return obj.file.insertOne( {
+            return obj.file.insertOne({
                 type: 'portMap',
                 fromNode: fromNode,
                 toNode: toNode,
@@ -57,8 +57,8 @@ module.exports.CreateDB = function(meshserver) {
                 aadcompat: aadcompat
             });
         };
-        obj.getAllMaps = function (nodeScope) {
-            return obj.file.find( { fromNode: { $in: nodeScope }, type: 'portMap' } ).toArray();
+        obj.getAllMaps = function(nodeScope) {
+            return obj.file.find({ fromNode: { $in: nodeScope }, type: 'portMap' }).toArray();
         };
         obj.getRdpLinksForUser = function(userId) {
             return obj.file.find({ type: 'portMap', user: userId, rdplink: true }).toArray();
@@ -66,7 +66,7 @@ module.exports.CreateDB = function(meshserver) {
 
     };
     
-    if (meshserver.args.mongodb) { // use MongDB
+    if (meshserver.args.mongodb) {
       require('mongodb').MongoClient.connect(meshserver.args.mongodb, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, client) {
           if (err != null) { console.log("Unable to connect to database: " + err); process.exit(); return; }
           
@@ -76,14 +76,11 @@ module.exports.CreateDB = function(meshserver) {
           
           obj.file = db.collection('plugin_workfromhome');
           obj.file.indexes(function (err, indexes) {
-              // Check if we need to reset indexes
               var indexesByName = {}, indexCount = 0;
               for (var i in indexes) { indexesByName[indexes[i].name] = indexes[i]; indexCount++; }
-              if ((indexCount != 1)) { // || (indexesByName['User1'] == null)) {
-                  // Reset all indexes
+              if ((indexCount != 1)) {
                   console.log('Resetting plugin (WorkFromHome) indexes...');
                   obj.file.dropIndexes(function (err) {
-                      //obj.file.createIndex({ user: 1 }, { name: 'User1' });
                   }); 
               }
           });
@@ -95,12 +92,11 @@ module.exports.CreateDB = function(meshserver) {
           }
           obj.initFunctions();
     });  
-    } else { // use NeDb
+    } else {
         Datastore = require('@yetzt/nedb');
         if (obj.filex == null) {
             obj.filex = new Datastore({ filename: meshserver.getConfigFilePath('plugin-workfromhome.db'), autoload: true });
             obj.filex.persistence.setAutocompactionInterval(40000);
-            //obj.filex.ensureIndex({ fieldName: 'user' });
         }
         obj.file = new NEMongo(obj.filex);
         formatId = function(id) { return id; };
