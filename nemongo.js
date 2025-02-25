@@ -44,10 +44,9 @@ class NEMongo {
     toArray(callback) {
         var self = this; 
         return new Promise(function(resolve, reject) {
-            self.nedb.find( self._find, self._proj ).sort(self._sort).limit(self._limit).exec((err, docs) => {
+            self.nedb.find(self._find, self._proj).sort(self._sort).limit(self._limit).exec((err, docs) => {
               if (callback != null && typeof callback == 'function') callback(err, docs);
               if (err != null) reject(err);
-              if (callback != null && typeof callback == 'function') callback(err, docs);
               else resolve(docs);
             });
         });

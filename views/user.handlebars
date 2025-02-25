@@ -1,6 +1,6 @@
 <html>
 <head>
-    <script type="text/javascript" src="scripts/common-0.0.1.js"></script>
+    <script type="text/javascript" src="scripts/common-0.0.2.js"></script>
 </head>
 <style>
     body {
@@ -117,7 +117,13 @@
     <div id="selectedContainer">
       <span class="header">Work Computer <span id="addMap" onclick="addMap();">[+]</span></span>
       <table id="nodeSelTbl">
-          <th>Node</th><th>Shortcut Label</th><th>AAD</th><th>Action</th>
+          <thead>
+              <tr>
+                  <th>Node</th><th>Shortcut Label</th><th>AAD</th><th>Action</th>
+              </tr>
+          </thead>
+          <tbody>
+          </tbody>
       </table>
     </div>
 </div>
@@ -195,19 +201,18 @@ function updateSelTable() {
   dRows.forEach((r) => {
       r.parentNode.removeChild(r);
   });
-  var selTbl = document.querySelector('#nodeSelTbl');
+  var selTbl = document.querySelector('#nodeSelTbl tbody');
   if (mappings != null && mappings.length) {
       mappings.forEach(function(i) {
           var item = {...i, ...{}};
           if (item.aadcompat) item.aadHtml = ' checked'; else item.aadHtml = '';
-          let tpl = `<td><div class="nIcon j${nodeMap[item.toNode].icon}"></div>${nodeMap[item.toNode].name}</td>
-            <td><span onclick="editLabel(this)" class="rdplabel">${item.rdplabel || "Work_Computer"}</span></td>
-            <td><input onchange="updateMapAad(this)" type="checkbox" class="aadcompat" ${item.aadHtml} /></td>
-            <td><a class="removeMap" onclick="removeMap(this);">Remove</td>`;
-          let tr = selTbl.insertRow(-1);
-          tr.innerHTML = tpl;
-          tr.setAttribute('x-data-id', item._id);
-          tr.classList.add('selRow');
+          let tpl = `<tr class="selRow" x-data-id="${item._id}">
+                        <td><div class="nIcon j${nodeMap[item.toNode].icon}"></div>${nodeMap[item.toNode].name}</td>
+                        <td><span onclick="editLabel(this)" class="rdplabel">${item.rdplabel || "Work_Computer"}</span></td>
+                        <td><input onchange="updateMapAad(this)" type="checkbox" class="aadcompat" ${item.aadHtml} /></td>
+                        <td><a class="removeMap" onclick="removeMap(this);">Remove</a></td>
+                     </tr>`;
+          selTbl.insertAdjacentHTML('beforeend', tpl);
       });
   }
 }

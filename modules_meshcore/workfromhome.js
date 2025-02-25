@@ -22,13 +22,11 @@ var fs = require('fs');
 var os = require('os');
 var net = require('net');
 var http = require('http');
-// var aad = true;
 
 var dbg = function(str) {
     if (debug_flag !== true) return;
     var fs = require('fs');
     var logStream = fs.createWriteStream('workfromhome.txt', {'flags': 'a'});
-    // use {'flags': 'a'} to append and {'flags': 'w'} to erase and write a new file
     logStream.write('\n'+new Date().toLocaleString()+': '+ str);
     logStream.end('\n');
 }
@@ -58,15 +56,12 @@ function consoleaction(args, rights, sessionid, parent) {
     switch (fnname) {
         case 'startRoute':
             var nowTime = Math.floor(new Date() / 1000);
-            // check for multiple calls. The agentCoreIsStable hook calls in rapid succession when re-checking in
-            // This will avoid "stomping" on the setup process
             if (lastStartRouteCall >= nowTime - 3 && args.waitTimer != 'y') {
                 dbg('Ignoring startRoute (called within the last 3 seconds)');
                 return;
             }
             lastStartRouteCall = nowTime;
             
-            // hold the unique mapId in memory in case a new packet is sent for recreation
             if (routeTrack[args.mid] != null && routeTrack[args.mid] != 'undefined') {
                 try {
                     if (args.localport == routeTrack[args.mid].tcpserver.address().port && routeTrack[args.mid].settings.remotenodeid == args.nodeid && routeTrack[args.mid].settings.rdplabel == args.rdplabel && routeTrack[args.mid].settings.aadcompat == args.aadcompat) {
@@ -91,7 +86,7 @@ function consoleaction(args, rights, sessionid, parent) {
             var settings = {
                 serverurl: mesh.ServerUrl.replace('agent.ashx', 'meshrelay.ashx'),
                 remotenodeid: args.nodeid,
-                remoteport: 3389, //args.remoteport,
+                remoteport: 3389,
                 localport: args.localport == null ? 0 : args.localport,
                 rdplabel: args.rdplabel,
                 aadcompat: args.aadcompat
@@ -102,7 +97,7 @@ function consoleaction(args, rights, sessionid, parent) {
                 routeTrack[args.mid] = r;
             } catch (e) { was_error = true; }
             
-            if (was_error) { // probably port in use, try again with new port
+            if (was_error) {
                 was_error = false;
                 settings.localport = 0;
                 try {
@@ -194,10 +189,8 @@ function makeRDPShortcut(actualLocalPort, rdplabel, aad) {
     
     var fileContents = "full address:s:127.0.0.1:" + actualLocalPort;
     
-    // if (aad) {
-        fileContents += "\r\nenablecredsspsupport:i:0"
+    fileContents += "\r\nenablecredsspsupport:i:0"
         + "\r\nauthentication level:i:2";
-    // }
     
     if (currentShortcutContents != fileContents) {
         dbg('writing to path: ' + path);
@@ -236,7 +229,6 @@ function RoutePlusRoute() {
     rObj.debug = debug;
     rObj.OnTcpClientConnected = function (c) {
         try {
-            // 'connection' listener
             c.on('end', function () { disconnectTunnel(this, this.websocket, "Client closed"); });
             c.pause();
             try {
@@ -264,31 +256,22 @@ function startRouter(settings) {
     this.tcpserver.on('error', function (e) { dbg("ERROR: " + JSON.stringify(e)); exit(0); return; });
     var t = this;
     this.tcpserver.listen(this.settings.localport, function () {
-        // We started listening.
         if (t.settings.remotetarget == null) {
             dbg('Redirecting local port ' + t.lport + ' to remote port ' + t.settings.remoteport + '.');
         } else {
             dbg('Redirecting local port ' + t.lport + ' to ' + t.settings.remotetarget + ':' + t.settings.remoteport + '.');
         }
-        //console.log("Press ctrl-c to exit.");
-
-        // If settings has a "cmd", run it now.
-        //process.exec("notepad.exe");
     });
 }
 
-// Called when a TCP connect is received on the local port. Launch a tunnel.
-
 function debug(level, message) { { dbg(message); } }
 
-// Disconnect both TCP & WebSocket connections and display a message.
 function disconnectTunnel(tcp, ws, msg) {
     if (ws != null) { try { ws.end(); } catch (e) { debug(2, e); } }
     if (tcp != null) { try { tcp.end(); } catch (e) { debug(2, e); } }
     debug(1, "Tunnel disconnected: " + msg);
 }
 
-// Called when the web socket gets connected
 function OnWebSocket(msg, s, head) {
     debug(1, "Websocket connected");
     s.on('data', function (msg) {
