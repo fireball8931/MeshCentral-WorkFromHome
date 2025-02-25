@@ -16,33 +16,43 @@ module.exports.CreateDB = function(meshserver) {
     
     obj.initFunctions = function () {
         obj.updateDBVersion = function(new_version) {
-          return obj.file.updateOne({type: "db_version"}, { $set: {version: new_version} }, {upsert: true});
+            return obj.file.updateOne({type: "db_version"}, { $set: {version: new_version} }, {upsert: true})
+                .catch(err => { console.error("Error updating DB version:", err); throw err; });
         };
         
         obj.getDBVersion = function() {
             return new Promise(function(resolve, reject) {
                 obj.file.find({ type: "db_version" }).project({ _id: 0, version: 1 }).toArray(function(err, vers){
-                    if (vers.length == 0) resolve(1);
-                    else resolve(vers[0]['version']);
+                    if (err) {
+                        console.error("Error getting DB version:", err);
+                        reject(err);
+                    } else {
+                        if (vers.length == 0) resolve(1);
+                        else resolve(vers[0]['version']);
+                    }
                 });
             });
         };
 
         obj.update = function(id, args) {
             id = formatId(id);
-            return obj.file.updateOne({ _id: id }, { $set: args });
+            return obj.file.updateOne({ _id: id }, { $set: args })
+                .catch(err => { console.error("Error updating record:", err); throw err; });
         };
         obj.delete = function(id) {
             id = formatId(id);
-            return obj.file.deleteOne({ _id: id });
+            return obj.file.deleteOne({ _id: id })
+                .catch(err => { console.error("Error deleting record:", err); throw err; });
         };
         obj.get = function(id) {
             if (id == null || id == 'null') return new Promise(function(resolve, reject) { resolve([]); });
             id = formatId(id);
-            return obj.file.find({ _id: id }).toArray();
+            return obj.file.find({ _id: id }).toArray()
+                .catch(err => { console.error("Error getting record:", err); throw err; });
         };
         obj.getMaps = function(nodeId) {
-            return obj.file.find({ fromNode: nodeId, type: 'portMap' }).toArray();
+            return obj.file.find({ fromNode: nodeId, type: 'portMap' }).toArray()
+                .catch(err => { console.error("Error getting maps:", err); throw err; });
         };
         obj.addMap = function(user, fromNode, toNode, rdplabel, aadcompat) {
             return obj.file.insertOne({
@@ -55,13 +65,15 @@ module.exports.CreateDB = function(meshserver) {
                 user: user,
                 rdplabel: rdplabel,
                 aadcompat: aadcompat
-            });
+            }).catch(err => { console.error("Error adding map:", err); throw err; });
         };
         obj.getAllMaps = function(nodeScope) {
-            return obj.file.find({ fromNode: { $in: nodeScope }, type: 'portMap' }).toArray();
+            return obj.file.find({ fromNode: { $in: nodeScope }, type: 'portMap' }).toArray()
+                .catch(err => { console.error("Error getting all maps:", err); throw err; });
         };
         obj.getRdpLinksForUser = function(userId) {
-            return obj.file.find({ type: 'portMap', user: userId, rdplink: true }).toArray();
+            return obj.file.find({ type: 'portMap', user: userId, rdplink: true }).toArray()
+                .catch(err => { console.error("Error getting RDP links for user:", err); throw err; });
         };
 
     };
