@@ -15,14 +15,18 @@ module.exports.CreateDB = function(meshserver) {
     obj.dbVersion = 1;
     
     obj.initFunctions = function () {
-        obj.updateDBVersion = function(new_version) {
-            return obj.file.updateOne({type: "db_version"}, { $set: {version: new_version} }, {upsert: true})
-                .catch(err => { console.error("Error updating DB version:", err); throw err; });
+        obj.updateDBVersion = async function(new_version) {
+            try {
+                await obj.file.updateOne({type: "db_version"}, { $set: {version: new_version} }, {upsert: true});
+            } catch (err) {
+                console.error("Error updating DB version:", err);
+                throw err;
+            }
         };
         
         obj.getDBVersion = function() {
-            return new Promise(function(resolve, reject) {
-                obj.file.find({ type: "db_version" }).project({ _id: 0, version: 1 }).toArray(function(err, vers){
+            return new Promise((resolve, reject) => {
+                obj.file.find({ type: "db_version" }).project({ _id: 0, version: 1 }).toArray((err, vers) => {
                     if (err) {
                         console.error("Error getting DB version:", err);
                         reject(err);
@@ -34,18 +38,26 @@ module.exports.CreateDB = function(meshserver) {
             });
         };
 
-        obj.update = function(id, args) {
+        obj.update = async function(id, args) {
             id = formatId(id);
-            return obj.file.updateOne({ _id: id }, { $set: args })
-                .catch(err => { console.error("Error updating record:", err); throw err; });
+            try {
+                await obj.file.updateOne({ _id: id }, { $set: args });
+            } catch (err) {
+                console.error("Error updating record:", err);
+                throw err;
+            }
         };
-        obj.delete = function(id) {
+        obj.delete = async function(id) {
             id = formatId(id);
-            return obj.file.deleteOne({ _id: id })
-                .catch(err => { console.error("Error deleting record:", err); throw err; });
+            try {
+                await obj.file.deleteOne({ _id: id });
+            } catch (err) {
+                console.error("Error deleting record:", err);
+                throw err;
+            }
         };
         obj.get = function(id) {
-            if (id == null || id == 'null') return new Promise(function(resolve, reject) { resolve([]); });
+            if (id == null || id == 'null') return Promise.resolve([]);
             id = formatId(id);
             return obj.file.find({ _id: id }).toArray()
                 .catch(err => { console.error("Error getting record:", err); throw err; });
@@ -54,18 +66,23 @@ module.exports.CreateDB = function(meshserver) {
             return obj.file.find({ fromNode: nodeId, type: 'portMap' }).toArray()
                 .catch(err => { console.error("Error getting maps:", err); throw err; });
         };
-        obj.addMap = function(user, fromNode, toNode, rdplabel, aadcompat) {
-            return obj.file.insertOne({
-                type: 'portMap',
-                fromNode: fromNode,
-                toNode: toNode,
-                port: 3389,
-                localport: 0,
-                auto: false,
-                user: user,
-                rdplabel: rdplabel,
-                aadcompat: aadcompat
-            }).catch(err => { console.error("Error adding map:", err); throw err; });
+        obj.addMap = async function(user, fromNode, toNode, rdplabel, aadcompat) {
+            try {
+                await obj.file.insertOne({
+                    type: 'portMap',
+                    fromNode: fromNode,
+                    toNode: toNode,
+                    port: 3389,
+                    localport: 0,
+                    auto: false,
+                    user: user,
+                    rdplabel: rdplabel,
+                    aadcompat: aadcompat
+                });
+            } catch (err) {
+                console.error("Error adding map:", err);
+                throw err;
+            }
         };
         obj.getAllMaps = function(nodeScope) {
             return obj.file.find({ fromNode: { $in: nodeScope }, type: 'portMap' }).toArray()
@@ -79,31 +96,30 @@ module.exports.CreateDB = function(meshserver) {
     };
     
     if (meshserver.args.mongodb) {
-      require('mongodb').MongoClient.connect(meshserver.args.mongodb, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, client) {
-          if (err != null) { console.log("Unable to connect to database: " + err); process.exit(); return; }
-          
-          var dbname = 'meshcentral';
-          if (meshserver.args.mongodbname) { dbname = meshserver.args.mongodbname; }
-          const db = client.db(dbname);
-          
-          obj.file = db.collection('plugin_workfromhome');
-          obj.file.indexes(function (err, indexes) {
-              var indexesByName = {}, indexCount = 0;
-              for (var i in indexes) { indexesByName[indexes[i].name] = indexes[i]; indexCount++; }
-              if ((indexCount != 1)) {
-                  console.log('Resetting plugin (WorkFromHome) indexes...');
-                  obj.file.dropIndexes(function (err) {
-                  }); 
-              }
-          });
-          
-          if (typeof require('mongodb').ObjectID == 'function') {
-              formatId = require('mongodb').ObjectID;
-          } else {
-              formatId = require('mongodb').ObjectId;
-          }
-          obj.initFunctions();
-    });  
+        require('mongodb').MongoClient.connect(meshserver.args.mongodb, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
+            if (err != null) { console.log("Unable to connect to database: " + err); process.exit(); return; }
+            
+            var dbname = 'meshcentral';
+            if (meshserver.args.mongodbname) { dbname = meshserver.args.mongodbname; }
+            const db = client.db(dbname);
+            
+            obj.file = db.collection('plugin_workfromhome');
+            obj.file.indexes((err, indexes) => {
+                var indexesByName = {}, indexCount = 0;
+                for (var i in indexes) { indexesByName[indexes[i].name] = indexes[i]; indexCount++; }
+                if ((indexCount != 1)) {
+                    console.log('Resetting plugin (WorkFromHome) indexes...');
+                    obj.file.dropIndexes((err) => {}); 
+                }
+            });
+            
+            if (typeof require('mongodb').ObjectID == 'function') {
+                formatId = require('mongodb').ObjectID;
+            } else {
+                formatId = require('mongodb').ObjectId;
+            }
+            obj.initFunctions();
+        });  
     } else {
         Datastore = require('@yetzt/nedb');
         if (obj.filex == null) {

@@ -27,7 +27,6 @@ class NEMongo {
     
     project(args) {
         this._proj = args;
-        
         return this;
     }
     
@@ -43,19 +42,19 @@ class NEMongo {
     
     toArray(callback) {
         var self = this; 
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             self.nedb.find(self._find, self._proj).sort(self._sort).limit(self._limit).exec((err, docs) => {
-              if (callback != null && typeof callback == 'function') callback(err, docs);
-              if (err != null) reject(err);
-              else resolve(docs);
+                if (callback != null && typeof callback == 'function') callback(err, docs);
+                if (err != null) reject(err);
+                else resolve(docs);
             });
         });
     }
     
     insertOne(args, options) {
         var self = this;
-        return new Promise(function(resolve, reject) {
-            self.nedb.insert(args, function(err, newDoc) { 
+        return new Promise((resolve, reject) => {
+            self.nedb.insert(args, (err, newDoc) => { 
                 if (err) reject(err);
                 newDoc.insertedId = newDoc._id;
                 resolve({ insertedId: newDoc._id });
@@ -66,10 +65,10 @@ class NEMongo {
     deleteOne(filter, options) {
         var self = this;
         self._find = filter;
-        return new Promise(function(resolve, reject) {
-            self.nedb.remove(self._find, { multi: false }, function(err, numRemoved) { 
+        return new Promise((resolve, reject) => {
+            self.nedb.remove(self._find, { multi: false }, (err, numRemoved) => { 
                 if (err) reject(err);
-                resolve( { deletedCount: numRemoved } );
+                resolve({ deletedCount: numRemoved });
             });
         });
     }
@@ -77,10 +76,10 @@ class NEMongo {
     deleteMany(filter, options) {
         var self = this;
         self._find = filter;
-        return new Promise(function(resolve, reject) {
-            self.nedb.remove(self._find, { multi: true }, function(err, numRemoved) { 
+        return new Promise((resolve, reject) => {
+            self.nedb.remove(self._find, { multi: true }, (err, numRemoved) => { 
                 if (err) reject(err);
-                resolve( { deletedCount: numRemoved } );
+                resolve({ deletedCount: numRemoved });
             });
         });
     }
@@ -90,8 +89,8 @@ class NEMongo {
         self._find = filter;
         if (options == null) options = {};
         if (options.upsert == null) options.upsert = false;
-        return new Promise(function(resolve, reject) {
-            self.nedb.update(self._find, update, { multi: false, upsert: options.upsert }, function(err, numAffected, affectedDoc) { 
+        return new Promise((resolve, reject) => {
+            self.nedb.update(self._find, update, { multi: false, upsert: options.upsert }, (err, numAffected, affectedDoc) => { 
                 if (err) reject(err);
                 var retObj = { matchedCount: numAffected, modifiedCount: numAffected };
                 if (affectedDoc != null) retObj.upsertedId = affectedDoc._id;
@@ -105,8 +104,8 @@ class NEMongo {
         self._find = filter;
         if (options == null) options = {};
         if (options.upsert == null) options.upsert = false;
-        return new Promise(function(resolve, reject) {
-            self.nedb.update(self._find, update, { multi: true, upsert: options.upsert }, function(err, numAffected, affectedDocs) { 
+        return new Promise((resolve, reject) => {
+            self.nedb.update(self._find, update, { multi: true, upsert: options.upsert }, (err, numAffected, affectedDocs) => { 
                 if (err) reject(err);
                 var retObj = { matchedCount: numAffected, modifiedCount: numAffected };
                 if (affectedDocs != null) retObj.upsertedId = affectedDocs[0]._id;
@@ -114,7 +113,6 @@ class NEMongo {
             });
         });
     }
-    
 }
 
 module.exports = NEMongo;
