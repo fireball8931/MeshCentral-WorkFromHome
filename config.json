@@ -1,7 +1,7 @@
 {
   "name": "Work From Home - Custom",
   "shortName": "workfromhome",
-  "version": "0.1.3c",
+  "version": "0.1.3d",
   "author": "Ryan Blenis - Updated by fireball8931",
   "description": "RDP Map one agent to another.",
   "hasAdminPanel": false,
