@@ -6,8 +6,8 @@
   "description": "RDP Map one agent to another.",
   "hasAdminPanel": false,
   "homepage": "https://github.com/fireball8931/MeshCentral-WorkFromHome",
-  "changelogUrl": "https://raw.githubusercontent.com/fireball8931/MeshCentral-WorkFromHome/master/changelog.md",
-  "configUrl": "https://raw.githubusercontent.com/fireball8931/MeshCentral-WorkFromHome/master/config.json",
+  "changelogUrl": "https://raw.githubusercontent.com/fireball8931/MeshCentral-WorkFromHome/update-1.1.37/changelog.md",
+  "configUrl": "https://raw.githubusercontent.com/fireball8931/MeshCentral-WorkFromHome/update-1.1.37/config.json",
   "downloadUrl": "https://github.com/fireball8931/MeshCentral-WorkFromHome/archive/update-1.1.37.zip",
   "repository": {
     "type": "git",
