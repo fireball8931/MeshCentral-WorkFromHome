@@ -7,7 +7,7 @@
 
 "use strict";
 var Datastore = null;
-var formatId = null;
+var formatId = function(id) { return id; };
 
 module.exports.CreateDB = function(meshserver) {
     var obj = {};
@@ -65,6 +65,7 @@ module.exports.CreateDB = function(meshserver) {
         };
 
     };
+    obj.initFunctions();
     
     if (meshserver.args.mongodb) {
       require('mongodb').MongoClient.connect(meshserver.args.mongodb, { useNewUrlParser: true, useUnifiedTopology: true }, function (err, client) {
@@ -84,14 +85,12 @@ module.exports.CreateDB = function(meshserver) {
                   }); 
               }
           });
-          
           if (typeof require('mongodb').ObjectID == 'function') {
               formatId = require('mongodb').ObjectID;
           } else {
               formatId = require('mongodb').ObjectId;
           }
-          obj.initFunctions();
-    });  
+      });
     } else {
         Datastore = require('@yetzt/nedb');
         if (obj.filex == null) {

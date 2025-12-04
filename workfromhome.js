@@ -54,7 +54,7 @@ module.exports.workfromhome = function (parent) {
         QA('pluginWorkFromHome', '<iframe id="pluginIframeWorkFromHome" style="width: 100%; height: 800px;" scrolling="no" frameBorder=0 src="/pluginadmin.ashx?pin=workfromhome&user=1&node='+ currentNode._id +'" />');
     };
     
-    obj.hook_agentCoreIsStable = function(myparent, gp) { // check for remaps when an agent logs in
+    obj.hook_agentCoreIsStable = function(myparent) { // check for remaps when an agent logs in
         obj.db.getMaps(myparent.dbNodeKey)
         .then((maps) => {
             if (maps.length) {
@@ -118,10 +118,10 @@ module.exports.workfromhome = function (parent) {
     };
     
     obj.handleAdminReq = function(req, res, user) {
+        var vars = {};
         if ((user.siteadmin & 0xFFFFFFFF) == 1 && req.query.admin == 1) 
         {
             // admin wants admin, grant
-            var vars = {};
             res.render(obj.VIEWS + 'admin', vars);
             return;
         } else if (req.query.dlrdpfile == 1) {
@@ -134,7 +134,6 @@ module.exports.workfromhome = function (parent) {
             res.render(obj.VIEWS + 'pickNode', vars);
             return;
         } else {
-            var vars = {};
             obj.db.getMaps(req.query.node)
             .then(maps => {
                 if (maps.length) vars.mappings = JSON.stringify(maps);
@@ -148,8 +147,6 @@ module.exports.workfromhome = function (parent) {
             
             return;
         }
-        res.sendStatus(401); 
-        return;
     };
     
     obj.removeMapFromComp = function(id) {

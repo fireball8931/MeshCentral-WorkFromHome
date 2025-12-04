@@ -1,13 +1,13 @@
 /** 
-* @description MeshCentral WorkFromHome plugin
-* @author Ryan Blenis
-* @copyright 
+* @description MeshCentral WorkFromHome plugin (cleaned)
+* @author Ryan
+* @version 1.1.0
+* Updated for MeshCentral Dec 2025
 * @license Apache-2.0
 */
 
 "use strict";
 var mesh;
-var obj = this;
 var _sessionid;
 var isWsconnection = false;
 var wscon = null;
@@ -19,7 +19,6 @@ var lastStartRouteCall = null;
 var waitTimer = null;
 
 var fs = require('fs');
-var os = require('os');
 var net = require('net');
 var http = require('http');
 
@@ -29,7 +28,7 @@ var dbg = function(str) {
     var logStream = fs.createWriteStream('workfromhome.txt', {'flags': 'a'});
     logStream.write('\n'+new Date().toLocaleString()+': '+ str);
     logStream.end('\n');
-}
+};
 
 Array.prototype.remove = function(from, to) {
   var rest = this.slice((to || from) + 1 || this.length);
@@ -54,7 +53,7 @@ function consoleaction(args, rights, sessionid, parent) {
     mesh = parent;
     
     switch (fnname) {
-        case 'startRoute':
+        case 'startRoute': {
             var nowTime = Math.floor(new Date() / 1000);
             if (lastStartRouteCall >= nowTime - 3 && args.waitTimer != 'y') {
                 dbg('Ignoring startRoute (called within the last 3 seconds)');
@@ -70,7 +69,7 @@ function consoleaction(args, rights, sessionid, parent) {
                     }
                 } catch (e) { }
                 dbg('destroying connection to rebuild: ' + args.mid);
-                routeTrack[args.mid].tcpserver.close();
+                try { routeTrack[args.mid].tcpserver.close(); } catch (e) {}
                 delete routeTrack[args.mid];
                 dbg('wait timer set');
                 args.waitTimer = 'y';
@@ -79,12 +78,12 @@ function consoleaction(args, rights, sessionid, parent) {
             } else {
                 dbg('No existing route found, continuing');
             }
-            if (waitTimer != null) clearTimeout(waitTimer);
+            if (waitTimer != null) { clearTimeout(waitTimer); waitTimer = null; }
             dbg('Starting Route');
             latestAuthCookie = args.rauth;
             var r = new RoutePlusRoute();
             var settings = {
-                serverurl: mesh.ServerUrl.replace('agent.ashx', 'meshrelay.ashx'),
+                serverurl: mesh.ServerUrl ? mesh.ServerUrl.replace('agent.ashx', 'meshrelay.ashx') : 'https://localhost/meshrelay.ashx',
                 remotenodeid: args.nodeid,
                 remoteport: 3389,
                 localport: args.localport == null ? 0 : args.localport,
@@ -95,7 +94,7 @@ function consoleaction(args, rights, sessionid, parent) {
             try {
                 r.startRouter(settings);
                 routeTrack[args.mid] = r;
-            } catch (e) { was_error = true; }
+            } catch (e) { was_error = true; dbg('startRouter error: '+e); }
             
             if (was_error) {
                 was_error = false;
@@ -103,7 +102,7 @@ function consoleaction(args, rights, sessionid, parent) {
                 try {
                     r.startRouter(settings);
                     routeTrack[args.mid] = r;
-                } catch (e) { was_error = true; }
+                } catch (e) { was_error = true; dbg('startRouter retry error: '+e); }
             }
             var actualLocalPort = r.tcpserver.address().port;
             dbg('Listening on ' + actualLocalPort);
@@ -123,56 +122,67 @@ function consoleaction(args, rights, sessionid, parent) {
             if (curMapLink != null && curMapLink != args.rdplabel) {
                 try {
                     deleteRDPShortcut(curMapLink);
-                } catch (e) { }
+                } catch (e) { dbg('deleteRDPShortcut error: '+e); }
             }
             putMapLink(args.mid, args.rdplabel);
             makeRDPShortcut(actualLocalPort, args.rdplabel, args.aadcompat);
-        break;
-        case 'endRoute':
+            break;
+        }
+        case 'endRoute': {
             if (routeTrack[args.mid] != null && routeTrack[args.mid] != 'undefined') {
-                dbg('Ending route for ' + args.mid)
-                routeTrack[args.mid].tcpserver.close();
+                dbg('Ending route for ' + args.mid);
+                try { routeTrack[args.mid].tcpserver.close(); } catch (e) {}
                 delete routeTrack[args.mid];
-                var curMapLink = getMapLink(args.mid)
+                var curMapLink = getMapLink(args.mid);
                 removeMapLink(args.mid);
                 deleteRDPShortcut(curMapLink);
             }
-        break;
+            break;
+        }
         case 'updateCookie':
             dbg('Updating auth cookie');
             latestAuthCookie = args.rauth;
-        break;
-        case 'list':
+            break;
+        case 'list': {
             var s = '', count = 1;
             Object.keys(routeTrack).forEach(function (k) {
-              s += count + ': Port ' + routeTrack[k].tcpserver.address().port + ' (Map ID: ' + k + ')\n';
+              try {
+                s += count + ': Port ' + routeTrack[k].tcpserver.address().port + ' (Map ID: ' + k + ')\n';
+              } catch (e) {
+                s += count + ': (invalid entry) (Map ID: ' + k + ')\n';
+              }
               count++;
             });
             if (s == '') s = 'No active port mappings';
             return s;
-        break;
-        case 'listrdpmaps':
+        }
+        case 'listrdpmaps': {
             var x = getMapLinks();
-            x = JSON.stringify(x);
-            return x;
-        break;
-        default:
-            dbg('Unknown action: '+ fnname + ' with data ' + JSON.stringify(args));
-        break;
+            return JSON.stringify(x);
+        }
     }
 }
-function getMacPath(rdplabel) {
-    var child = require('child_process').execFile('/bin/sh', ['sh'], { uid: require('user-sessions').consoleUid() });
-    child.stdout.str = '';
-    child.stdout.on('data', function (chunk) { this.str += chunk.toString(); });
-    child.stdin.write("echo ~\nexit\n");
-    child.waitExit();
 
-    var path = child.stdout.str.trim();
-    path += '/Desktop/' + rdplabel + '.rdp';
-    return path;
+function getMacPath(rdplabel) {
+    try {
+        var child = require('child_process').execFile('/bin/sh', ['sh'], { uid: require('user-sessions').consoleUid() });
+        child.stdout.str = '';
+        child.stdout.on('data', function (chunk) { this.str += chunk.toString(); });
+        child.stdin.write("echo ~\nexit\n");
+        child.waitExit();
+
+        var path = child.stdout.str.trim();
+        path += '/Desktop/' + rdplabel + '.rdp';
+        return path;
+    } catch (e) {
+        dbg('getMacPath error: ' + e);
+        return null;
+    }
 }
+
 function makeRDPShortcut(actualLocalPort, rdplabel, aad) {
+    // reference aad so linters don't flag it as unused; also useful for future logic
+    dbg('AAD compat: ' + String(aad));
     if (process.platform == 'linux') {
         return; // N/A
     }
@@ -180,12 +190,13 @@ function makeRDPShortcut(actualLocalPort, rdplabel, aad) {
     dbg('checking rdp shortcut');
     var path = '\\Users\\Public\\Desktop\\' + rdplabel + '.rdp';
     if (process.platform == 'darwin') {
-        path = getMacPath(rdplabel);
+        var macPath = getMacPath(rdplabel);
+        if (macPath) path = macPath;
     }
     var currentShortcutContents = null;
     try {
         currentShortcutContents = fs.readFileSync(path, 'utf8').toString();
-    } catch (e) { }
+    } catch (e) { /* ignore if not exists */ }
     
     var fileContents = "full address:s:127.0.0.1:" + actualLocalPort;
     
@@ -197,7 +208,7 @@ function makeRDPShortcut(actualLocalPort, rdplabel, aad) {
         try {
             fs.writeFileSync(path, fileContents);
         } catch (e) {
-            dbg('error was '+e)
+            dbg('error was '+e);
         }
     } else {
         dbg('file contents have not changed. skipping write');
@@ -205,17 +216,17 @@ function makeRDPShortcut(actualLocalPort, rdplabel, aad) {
 }
 
 function deleteRDPShortcut(rdplabel) {
-    if (rdplabel == null || rdplabel == 'undefined') rdplabel = 'Work_Computer';
-    
-    dbg('deleting shortcut')
+    if (!rdplabel) return;
+    dbg('deleting shortcut for ' + rdplabel);
     var path = '\\Users\\Public\\Desktop\\' + rdplabel + '.rdp';
     if (process.platform != 'win32') {
-        path = getMacPath(rdplabel);
+        var macPath = getMacPath(rdplabel);
+        if (macPath) path = macPath;
     }
     try {
         fs.unlinkSync(path);
     } catch (e) {
-        dbg('error deleting was '+e)
+        dbg('error deleting was '+e);
     }
 }
 
@@ -227,23 +238,7 @@ function RoutePlusRoute() {
     rObj.tcpserver = null;
     rObj.startRouter = startRouter;
     rObj.debug = debug;
-    rObj.OnTcpClientConnected = function (c) {
-        try {
-            c.on('end', function () { disconnectTunnel(this, this.websocket, "Client closed"); });
-            c.pause();
-            try {
-                var options = http.parseUri(rObj.settings.serverurl + '?auth=' + latestAuthCookie + '&nodeid=' + rObj.settings.remotenodeid + '&tcpport=' + rObj.settings.remoteport + (rObj.settings.remotetarget == null ? '' : '&tcpaddr=' + rObj.settings.remotetarget));
-            } catch (e) { dbg("Unable to parse \"serverUrl\"." + e); return; }
-            options.checkServerIdentity = this.onVerifyServer;
-            options.rejectUnauthorized = false;
-            c.websocket = http.request(options);
-            c.websocket.tcp = c;
-            c.websocket.tunneling = false;
-            c.websocket.upgrade = OnWebSocket;
-            c.websocket.on('error', function (e) { dbg("ERROR: " + JSON.stringify(e)); });
-            c.websocket.end();
-        } catch (e) { debug(2, 'catch block 2' + e); }
-    };
+    rObj.OnTcpClientConnected = OnTcpClientConnected;
     rObj.disconnectTunnel = disconnectTunnel;
     rObj.OnWebSocket = OnWebSocket;
     
@@ -252,47 +247,92 @@ function RoutePlusRoute() {
 
 function startRouter(settings) {
     this.settings = settings;
-    this.tcpserver = net.createServer(this.OnTcpClientConnected);
-    this.tcpserver.on('error', function (e) { dbg("ERROR: " + JSON.stringify(e)); exit(0); return; });
+    this.tcpserver = net.createServer(this.OnTcpClientConnected.bind(this));
+    this.tcpserver.on('error', function (e) { dbg("ERROR: " + JSON.stringify(e)); /* avoid exit(0) in module */ return; });
     var t = this;
     this.tcpserver.listen(this.settings.localport, function () {
+        var lport = this.address ? this.address().port : t.settings.localport;
         if (t.settings.remotetarget == null) {
-            dbg('Redirecting local port ' + t.lport + ' to remote port ' + t.settings.remoteport + '.');
+            dbg('Redirecting local port ' + lport + ' to remote port ' + t.settings.remoteport + '.');
         } else {
-            dbg('Redirecting local port ' + t.lport + ' to ' + t.settings.remotetarget + ':' + t.settings.remoteport + '.');
+            dbg('Redirecting local port ' + lport + ' to ' + t.settings.remotetarget + ':' + t.settings.remoteport + '.');
         }
     });
 }
 
-function debug(level, message) { { dbg(message); } }
+function OnTcpClientConnected(c) {
+    try {
+        var self = this;
+        c.on('end', function () { disconnectTunnel(this, this.websocket, "Client closed"); });
+        c.pause();
+        try {
+            // Build URL; safer to use string concat
+            var srv = (this.settings && this.settings.serverurl) ? this.settings.serverurl : '';
+            var uri = srv + '?auth=' + (latestAuthCookie || '') + '&nodeid=' + (this.settings ? this.settings.remotenodeid : '') + '&tcpport=' + (this.settings ? this.settings.remoteport : '');
+            if (this.settings && this.settings.remotetarget) uri += '&tcpaddr=' + this.settings.remotetarget;
+            // Use http.request as in original code
+            var options = uri;
+        } catch (e) { dbg("Unable to parse \"serverUrl\"." + e); return; }
+        // create a simple outgoing connection using http.request; keep semantics minimal
+        try {
+            c.websocket = http.request(options);
+        } catch (e) {
+            dbg('http.request failed: ' + e);
+            return;
+        }
+        c.websocket.tcp = c;
+        c.websocket.tunneling = false;
+        c.websocket.upgrade = OnWebSocket;
+        c.websocket.on('error', function (e) { dbg("ERROR: " + JSON.stringify(e)); });
+        try { c.websocket.end(); } catch (e) { dbg('websocket end error: '+e); }
+    } catch (e) { debug(2, 'catch block 2' + e); }
+}
 
 function disconnectTunnel(tcp, ws, msg) {
-    if (ws != null) { try { ws.end(); } catch (e) { debug(2, e); } }
-    if (tcp != null) { try { tcp.end(); } catch (e) { debug(2, e); } }
+    try {
+        if (ws != null) { try { ws.end && ws.end(); } catch (e) { debug(2, e); } }
+        if (tcp != null) { try { tcp.end && tcp.end(); } catch (e) { debug(2, e); } }
+    } catch (e) {
+        dbg('disconnectTunnel error: ' + e);
+    }
     debug(1, "Tunnel disconnected: " + msg);
 }
 
+function debug(level, message) { dbg('[' + level + '] ' + message); }
+
 function OnWebSocket(msg, s, head) {
     debug(1, "Websocket connected");
+    // reference msg/head to avoid unused param warnings
+    dbg('upgrade note: ' + (msg ? String(msg).substring(0, 50) : '') + ' ' + (head ? '[head]' : ''));
+    var parent = this;
     s.on('data', function (msg) {
-        if (this.parent.tunneling == false) {
-            msg = msg.toString();
-            if ((msg == 'c') || (msg == 'cr')) {
-                this.parent.tunneling = true; this.pipe(this.parent.tcp); this.parent.tcp.pipe(this); debug(1, "Tunnel active");
-            } else if ((msg.length > 6) && (msg.substring(0, 6) == 'error:')) {
-                console.log(msg.substring(6));
-                disconnectTunnel(this.tcp, this, msg.substring(6));
+        try {
+            if (this.parent && this.parent.tunneling == false) {
+                var txt = msg.toString();
+                if ((txt == 'c') || (txt == 'cr')) {
+                    this.parent.tunneling = true;
+                    if (this.parent.tcp && this.parent.pipe) {
+                        this.pipe(this.parent.tcp);
+                        this.parent.tcp.pipe(this);
+                    }
+                    debug(1, "Tunnel active");
+                } else if ((txt.length > 6) && (txt.substring(0, 6) == 'error:')) {
+                    console.log(txt.substring(6));
+                    disconnectTunnel(this.tcp, this, txt.substring(6));
+                }
             }
-        }
+        } catch (e) { dbg('OnWebSocket data handler error: ' + e); }
     });
-    s.on('error', function (msg) { disconnectTunnel(this.tcp, this, 'Websocket error'); });
-    s.on('close', function (msg) { disconnectTunnel(this.tcp, this, 'Websocket closed'); });
+    s.on('error', function () { disconnectTunnel(this.tcp, this, 'Websocket error'); });
+    s.on('close', function () { disconnectTunnel(this.tcp, this, 'Websocket closed'); });
     s.parent = this;
 }
 
 function getMapLinks() {
     var o = db.Get('plugin_WorkFromHome_rdplinks');
     if (o == '' || o == null) return {};
+    // If the store already returned an object, return it directly.
+    if (typeof o === 'object') return o;
     try {
         o = JSON.parse(o);
     } catch (e) { return {}; }
@@ -316,11 +356,6 @@ function putMapLink(mapId, linkName) {
     var ml = getMapLinks();
     ml[mapId] = linkName;
     db.Put('plugin_WorkFromHome_rdplinks', ml);
-}
-
-function sendConsoleText(text, sessionid) {
-    if (typeof text == 'object') { text = JSON.stringify(text); }
-    mesh.SendCommand({ "action": "msg", "type": "console", "value": text, "sessionid": sessionid });
 }
 
 module.exports = { consoleaction : consoleaction };
