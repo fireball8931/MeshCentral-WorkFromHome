@@ -134,7 +134,15 @@ module.exports.workfromhome = function (parent) {
             res.render(obj.VIEWS + 'pickNode', vars);
             return;
         } else {
-            obj.db.getMaps(req.query.node)
+            // Ensure DB is initialized (lazy fallback to pluginHandler stored DB)
+            var db = obj.db || (obj.meshServer && obj.meshServer.pluginHandler && obj.meshServer.pluginHandler.workfromhome_db);
+            if (!db) {
+                console.log('PLUGIN: WorkFromHome: DB not initialized when handling admin request.');
+                res.status(500).send('Plugin DB not initialized');
+                return;
+            }
+
+            db.getMaps(req.query.node)
             .then(maps => {
                 if (maps.length) vars.mappings = JSON.stringify(maps);
                 else vars.mappings = 'null';
@@ -192,18 +200,10 @@ module.exports.workfromhome = function (parent) {
                 obj.meshServer.webserver.wssessions2[sess.sessionId].send(JSON.stringify(msg));
             });
         }*/
-        if (ids.fromNode != null) {
-            obj.db.getMaps(ids.fromNode)
-            .then((nodeMaps) => {
-                var targets = ['*', 'server-users'];
-                obj.meshServer.DispatchEvent(targets, obj, { nolog: true, action: 'plugin', plugin: 'workfromhome', pluginaction: 'updateMapData', nodeId: ids.fromNode, mapData: nodeMaps });
-            });
-        }
-    };
-    obj.serveraction = function(command, myparent, grandparent) {
+    obj.serveraction = function(command, myparent) {
         switch (command.pluginaction) {
             case 'addMap':
-                var newMapId = null, myComp = null;
+                var newMapId = null;
                 obj.db.addMap(command.user, command.fromNode, command.toNode, command.rdplabel, command.aadcompat)
                 .then((newMapInfo) => {
                     newMapId = newMapInfo.insertedId;
@@ -277,4 +277,5 @@ module.exports.workfromhome = function (parent) {
     };
     
     return obj;
+}
 }
