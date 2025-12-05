@@ -92,7 +92,7 @@ module.exports.CreateDB = function(meshserver) {
           }
       });
     } else {
-        Datastore = require('@yetzt/nedb');
+        Datastore = require('@seald-io/nedb');
         if (obj.filex == null) {
             obj.filex = new Datastore({ filename: meshserver.getConfigFilePath('plugin-workfromhome.db'), autoload: true });
             obj.filex.persistence.setAutocompactionInterval(40000);
